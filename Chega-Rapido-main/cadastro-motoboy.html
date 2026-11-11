@@ -5,19 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cadastro Motoboy - EntregAqui</title>
 <style>
-body{font-family:Arial;background:#f5f5f5;padding:15px}
+body{font-family:Arial;background:#f5f5f5;padding:15px;margin:0}
 .card{background:#fff;max-width:480px;margin:auto;padding:20px;border-radius:12px}
-input,select{width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box}
-button{width:100%;padding:13px;background:#ff6b00;color:#fff;border:0;border-radius:8px;font-weight:bold;cursor:pointer}
+input{width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box}
+label{font-weight:bold;font-size:14px;display:block;margin-top:12px}
+button{width:100%;padding:13px;background:#ff6b00;color:#fff;border:0;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:10px}
 button:disabled{opacity:0.6}
 .msg{margin-top:10px;padding:10px;border-radius:8px;display:none}
-hr{margin:20px 0}
+img.preview{width:100%;border-radius:10px;display:none;margin:8px 0}
+hr{margin:22px 0}
 </style>
 </head>
 <body>
 <div class="card">
 <h2>Quero ser motoboy</h2>
-<p>Cadastre-se e aguarde aprovação.</p>
+<p>Preencha tudo e tire as 3 fotos. Sem foto não envia.</p>
 
 <form onsubmit="cadastrar(event)">
 <input id="nome" placeholder="Nome completo" required>
@@ -25,6 +27,19 @@ hr{margin:20px 0}
 <input id="telefone" placeholder="WhatsApp com DDD" required>
 <input id="placa" placeholder="Placa da moto" required>
 <input id="senha" type="password" placeholder="Crie uma senha" required>
+
+<label>CNH - frente *</label>
+<input type="file" id="fotoCNH" accept="image/*" required onchange="verFoto(this,'prevCNH')">
+<img id="prevCNH" class="preview">
+
+<label>CRLV - documento da moto *</label>
+<input type="file" id="fotoCRLV" accept="image/*" required onchange="verFoto(this,'prevCRLV')">
+<img id="prevCRLV" class="preview">
+
+<label>Selfie com documento *</label>
+<input type="file" id="fotoSelfie" accept="image/*" required onchange="verFoto(this,'prevSelfie')">
+<img id="prevSelfie" class="preview">
+
 <button id="btnCadastrar" type="submit">Enviar cadastro</button>
 </form>
 <div id="msg" class="msg"></div>
@@ -34,7 +49,6 @@ hr{margin:20px 0}
 <input id="cpfConsulta" placeholder="Digite seu CPF">
 <button type="button" onclick="consultar()">Consultar status</button>
 <div id="msgConsulta" class="msg"></div>
-
 <br><a href="index.html">Voltar</a>
 </div>
 
@@ -46,6 +60,22 @@ function mostrar(id, texto, cor){
   el.style.background = cor;
   el.textContent = texto;
 }
+function verFoto(input, idImg){
+  const file = input.files[0];
+  if(!file) return;
+  const img = document.getElementById(idImg);
+  const reader = new FileReader();
+  reader.onload = e => { img.src = e.target.result; img.style.display='block'; };
+  reader.readAsDataURL(file);
+}
+
+async function enviarFoto(file, cpf, tipo){
+  const nomeArquivo = cpf + '_' + tipo + '_' + Date.now() + '.jpg';
+  const { error } = await supabase.storage.from('fotos-motoboys').upload(nomeArquivo, file);
+  if(error) throw new Error('Erro ao enviar ' + tipo + ': ' + error.message);
+  const { data } = supabase.storage.from('fotos-motoboys').getPublicUrl(nomeArquivo);
+  return data.publicUrl;
+}
 
 async function cadastrar(e){
   e.preventDefault();
@@ -53,42 +83,55 @@ async function cadastrar(e){
   btn.disabled = true;
   btn.textContent = 'Enviando...';
 
-  const dados = {
-    nome: document.getElementById('nome').value.trim(),
-    cpf: document.getElementById('cpf').value.replace(/\D/g,''),
-    telefone: document.getElementById('telefone').value.trim(),
-    placa: document.getElementById('placa').value.trim().toUpperCase(),
-    senha: document.getElementById('senha').value,
-    status: 'pendente',
-    cidade: 'São José dos Campos'
-  };
+  try{
+    const cpf = document.getElementById('cpf').value.replace(/\D/g,'');
+    const fCNH = document.getElementById('fotoCNH').files[0];
+    const fCRLV = document.getElementById('fotoCRLV').files[0];
+    const fSelfie = document.getElementById('fotoSelfie').files[0];
 
-  const { error } = await supabase.from('motoboys').insert([dados]);
+    if(!fCNH) throw new Error('Falta a foto da CNH');
+    if(!fCRLV) throw new Error('Falta a foto do CRLV');
+    if(!fSelfie) throw new Error('Falta a Selfie');
+    if(typeof supabase === 'undefined') throw new Error('supabase.js não carregou');
 
-  if(error){
-    mostrar('msg', 'Erro: ' + error.message, '#ffe0e0');
-    btn.disabled = false;
-    btn.textContent = 'Enviar cadastro';
-    return;
+    btn.textContent = 'Enviando foto CNH...';
+    const urlCNH = await enviarFoto(fCNH, cpf, 'cnh');
+    btn.textContent = 'Enviando foto CRLV...';
+    const urlCRLV = await enviarFoto(fCRLV, cpf, 'crlv');
+    btn.textContent = 'Enviando Selfie...';
+    const urlSelfie = await enviarFoto(fSelfie, cpf, 'selfie');
+
+    btn.textContent = 'Salvando cadastro...';
+    const dados = {
+      nome: document.getElementById('nome').value.trim(),
+      cpf: cpf,
+      telefone: document.getElementById('telefone').value.trim(),
+      placa: document.getElementById('placa').value.trim().toUpperCase(),
+      senha: document.getElementById('senha').value,
+      status: 'pendente',
+      cidade: 'São José dos Campos',
+      foto_cnh: urlCNH,
+      foto_crlv: urlCRLV,
+      foto_selfie: urlSelfie
+    };
+
+    const { error } = await supabase.from('motoboys').insert([dados]);
+    if(error) throw error;
+
+    mostrar('msg', 'Cadastro enviado! Fotos salvas no Supabase. Aguarde aprovação.', '#e0ffe0');
+  }catch(err){
+    mostrar('msg', 'ERRO: ' + (err.message || err), '#ffe0e0');
+    alert('ERRO: ' + (err.message || err));
   }
-
-  mostrar('msg', 'Cadastro enviado! Aguarde aprovação do admin. Consulte seu status abaixo com seu CPF.', '#e0ffe0');
-  // NÃO limpa o form, pra não parecer que apagou
   btn.disabled = false;
   btn.textContent = 'Enviar cadastro';
 }
 
 async function consultar(){
   const cpf = document.getElementById('cpfConsulta').value.replace(/\D/g,'');
-  if(!cpf){ mostrar('msgConsulta','Digite o CPF',' #ffe0e0'); return; }
-  
+  if(!cpf){ mostrar('msgConsulta','Digite o CPF','#ffe0e0'); return; }
   const { data, error } = await supabase.from('motoboys').select('*').eq('cpf', cpf).single();
-
-  if(error || !data){
-    mostrar('msgConsulta','Cadastro não encontrado. Verifique o CPF.','#ffe0e0');
-    return;
-  }
-
+  if(error || !data){ mostrar('msgConsulta','Cadastro não encontrado.','#ffe0e0'); return; }
   if(data.status === 'pendente') mostrar('msgConsulta','Status: PENDENTE - Aguardando aprovação.','#fff3cd');
   if(data.status === 'aprovado') mostrar('msgConsulta','Status: APROVADO - Você já pode logar!','#e0ffe0');
   if(data.status === 'reprovado') mostrar('msgConsulta','Status: REPROVADO - Fale com o suporte.','#ffe0e0');
