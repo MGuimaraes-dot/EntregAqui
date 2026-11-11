@@ -96,19 +96,16 @@ function mostrar(id, texto, cor){
 function setFoto(tipo, input, idImg, idOk){
   const file = input.files[0];
   if(!file) return;
-  arquivos[tipo] = file;
-  const img = document.getElementById(idImg);
+  // Converte pra base64 na hora, assim já fica salva na memória
   const reader = new FileReader();
-  reader.onload = e => { img.src = e.target.result; img.style.display='block'; };
+  reader.onload = e => {
+    arquivos[tipo] = e.target.result; // aqui já é o código da foto
+    const img = document.getElementById(idImg);
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById(idOk).style.display = 'block';
+  };
   reader.readAsDataURL(file);
-  document.getElementById(idOk).style.display = 'block';
-}
-async function enviarFoto(file, cpf, tipo){
-  const nomeArquivo = cpf + '_' + tipo + '_' + Date.now() + '.jpg';
-  const { error } = await supabase.storage.from('fotos-motoboys').upload(nomeArquivo, file, { upsert: true, contentType: file.type || 'image/jpeg' });
-  if(error) throw new Error('Erro ao enviar ' + tipo + ': ' + error.message);
-  const { data } = supabase.storage.from('fotos-motoboys').getPublicUrl(nomeArquivo);
-  return data.publicUrl;
 }
 async function cadastrar(e){
   e.preventDefault();
@@ -120,17 +117,22 @@ async function cadastrar(e){
     if(!arquivos.cnh) throw new Error('Falta a foto da CNH');
     if(!arquivos.crlv) throw new Error('Falta a foto do CRLV');
     if(!arquivos.selfie) throw new Error('Falta a Selfie');
-    btn.textContent = 'Enviando foto CNH...';
-    const urlCNH = await enviarFoto(arquivos.cnh, cpf, 'cnh');
-    btn.textContent = 'Enviando foto CRLV...';
-    const urlCRLV = await enviarFoto(arquivos.crlv, cpf, 'crlv');
-    btn.textContent = 'Enviando Selfie...';
-    const urlSelfie = await enviarFoto(arquivos.selfie, cpf, 'selfie');
-    btn.textContent = 'Salvando cadastro...';
-    const dados = { nome: document.getElementById('nome').value.trim(), cpf: cpf, telefone: document.getElementById('telefone').value.trim(), placa: document.getElementById('placa').value.trim().toUpperCase(), senha: document.getElementById('senha').value, status: 'pendente', cidade: 'São José dos Campos', foto_cnh: urlCNH, foto_crlv: urlCRLV, foto_selfie: urlSelfie };
+
+    const dados = {
+      nome: document.getElementById('nome').value.trim(),
+      cpf: cpf,
+      telefone: document.getElementById('telefone').value.trim(),
+      placa: document.getElementById('placa').value.trim().toUpperCase(),
+      senha: document.getElementById('senha').value,
+      status: 'pendente',
+      cidade: 'São José dos Campos',
+      foto_cnh: arquivos.cnh,
+      foto_crlv: arquivos.crlv,
+      foto_selfie: arquivos.selfie
+    };
     const { error } = await supabase.from('motoboys').insert([dados]);
     if(error) throw error;
-    mostrar('msg', 'Cadastro enviado! Fotos salvas no Supabase. Aguarde aprovação.', '#e0ffe0');
+    mostrar('msg', 'Cadastro enviado! Fotos salvas. Aguarde aprovação.', '#e0ffe0');
   }catch(err){
     mostrar('msg', 'ERRO: ' + (err.message || err), '#ffe0e0');
     alert('ERRO: ' + (err.message || err));
