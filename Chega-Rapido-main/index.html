@@ -1,0 +1,91 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chega Rápido</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<style>*{box-sizing:border-box;font-family:system-ui,Arial}body{margin:0;background:#fff5ef}
+header{background:#ff5a00;color:#fff;padding:16px;text-align:center;font-weight:900;font-size:22px}
+header small{font-weight:400;font-size:13px;display:block}
+.card{max-width:420px;margin:16px auto;background:#fff;border-radius:18px;padding:22px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.tabs{display:flex;background:#f1f1f1;border-radius:12px;padding:4px}.tabs button{flex:1;padding:12px;border:0;border-radius:9px;font-weight:800;cursor:pointer;background:transparent}
+.tabs button.ativo{background:#ff5a00;color:#fff}
+label{font-size:13px;font-weight:700;display:block;margin:14px 0 4px}
+input{width:100%;padding:13px;border:1px solid #ddd;border-radius:11px;font-size:15px}
+.btn{width:100%;padding:14px;border:0;border-radius:12px;font-weight:800;font-size:16px;cursor:pointer;margin-top:14px}
+.btn-green{background:#00a650;color:#fff}.btn:disabled{opacity:.6}
+.link{color:#ff5a00;font-weight:700;text-align:center;display:block;margin-top:12px;cursor:pointer;font-size:14px}
+</style></head><body>
+<header>🛵 CHEGA RÁPIDO<br><small id="cidadeTopo">Entrega rápida na sua cidade</small></header>
+<div class="card">
+<div style="text-align:center"><h2 style="margin:0">Entregas sem complicação</h2><p style="color:#666">Lojista cria entrega, motoboy aceita. Rápido, simples e no celular.</p></div>
+<div class="tabs"><button type="button" id="tabLoja" class="ativo" onclick="trocar('loja')">🏪 Sou Loja</button><button type="button" id="tabMoto" onclick="trocar('moto')">🛵 Sou Motoboy</button></div>
+<div id="formLoja"><label>CNPJ da loja</label><input id="cnpj" placeholder="Só números" inputmode="numeric"><label>Senha</label><input id="senhaLoja" type="password" placeholder="Sua senha"><button type="button" id="btnLoja" class="btn btn-green" onclick="loginLoja()">Entrar como Loja →</button></div>
+<div id="formMoto" style="display:none"><label>CPF do motoboy</label><input id="cpf" placeholder="Só números - ex: 12345678900" inputmode="numeric"><label>Senha</label><input id="senhaMoto" type="password" placeholder="Sua senha"><button type="button" id="btnMoto" class="btn btn-green" onclick="loginMoto()">Entrar como Motoboy →</button><span class="link" onclick="location.href='cadastro-motoboy.html'">Ainda não tem conta? Cadastrar como motoboy</span></div>
+<div id="erro" style="color:red;text-align:center;margin-top:10px"></div>
+</div>
+<script>
+if(navigator.geolocation){
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+      const d=await r.json();
+      const cidade=d.address.city||d.address.town||d.address.village||d.address.municipality;
+      if(cidade){ document.getElementById('cidadeTopo').innerText='Entrega rápida em '+cidade; localStorage.setItem('cidade_atual', cidade); }
+    }catch(e){}
+  },()=>{}, {timeout:5000});
+}
+function trocar(t){ document.getElementById('formLoja').style.display=t==='loja'?'block':'none'; document.getElementById('formMoto').style.display=t==='moto'?'block':'none'; document.getElementById('tabLoja').className=t==='loja'?'ativo':''; document.getElementById('tabMoto').className=t==='moto'?'ativo':''; document.getElementById('erro').innerText=''; }
+function mostrarErro(msg){ document.getElementById('erro').innerText=msg; }
+
+async function loginLoja(){
+  const btn=document.getElementById('btnLoja');
+  document.getElementById('erro').innerText='';
+  const cnpj=soNumeros(document.getElementById('cnpj').value);
+  const senha=document.getElementById('senhaLoja').value;
+  if(!cnpj || !senha) return mostrarErro('Preencha CNPJ e senha');
+  const client = window.supabaseClient;
+  if(!client) return mostrarErro('Erro de conexão. Recarregue a página.');
+  btn.disabled=true; btn.innerText='Entrando...';
+  try{
+    let {data, error} = await client.from('lojas').select('*').eq('cnpj',cnpj).eq('senha',senha).maybeSingle();
+    if(!data && !error){
+      const cnpjMask = cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5');
+      const r2 = await client.from('lojas').select('*').eq('cnpj',cnpjMask).eq('senha',senha).maybeSingle();
+      data = r2.data; error = r2.error;
+    }
+    if(error) throw error;
+    if(!data) return mostrarErro('CNPJ ou senha inválidos');
+    if(data.bloqueado===true || data.status==='bloqueado') return mostrarErro('🔴 Loja bloqueada. Fale com a central.');
+    setLoja(data);
+    location.href='loja.html';
+  }catch(e){ console.error(e); mostrarErro('Erro ao entrar: '+(e.message||'tente novamente')); }
+  finally{ btn.disabled=false; btn.innerText='Entrar como Loja →'; }
+}
+
+async function loginMoto(){
+  const btn=document.getElementById('btnMoto');
+  document.getElementById('erro').innerText='';
+  const cpf=soNumeros(document.getElementById('cpf').value);
+  const senha=document.getElementById('senhaMoto').value;
+  if(!cpf || !senha) return mostrarErro('Preencha CPF e senha');
+  const client = window.supabaseClient;
+  if(!client) return mostrarErro('Erro de conexão. Recarregue a página.');
+  btn.disabled=true; btn.innerText='Entrando...';
+  try{
+    let {data, error} = await client.from('motoboys').select('*').eq('cpf',cpf).eq('senha',senha).maybeSingle();
+    if(!data && !error){
+      const cpfMask = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4');
+      const r2 = await client.from('motoboys').select('*').eq('cpf',cpfMask).eq('senha',senha).maybeSingle();
+      data = r2.data; error = r2.error;
+    }
+    if(error) throw error;
+    if(!data) return mostrarErro('CPF ou senha inválidos');
+    if(data.status==='pendente' || (data.status==null && data.aprovado===false)) return mostrarErro('⏳ Seu cadastro está em análise. Aguarde a aprovação. Te avisamos no WhatsApp.');
+    if(data.status==='rejeitado') return mostrarErro('❌ Cadastro não aprovado. Fale com a central.');
+    if(data.status==='bloqueado' || data.bloqueado===true) return mostrarErro('🔴 Cadastro bloqueado. Fale com a central.');
+    setMotoboy(data);
+    location.href='motoboy.html';
+  }catch(e){ console.error(e); mostrarErro('Erro ao entrar: '+(e.message||'tente novamente')); }
+  finally{ btn.disabled=false; btn.innerText='Entrar como Motoboy →'; }
+}
+</script></body></html>

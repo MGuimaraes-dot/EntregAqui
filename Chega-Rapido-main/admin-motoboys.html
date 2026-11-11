@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aprovar Motoboys - Chega Rápido</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<style>
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+  body { background: #f6f6f6; margin: 0; padding: 16px; }
+  .box { background: #fff; max-width: 700px; margin: 0 auto; padding: 16px; border-radius: 16px; }
+  h1 { font-size: 20px; }
+  .card { border: 1.5px solid #eee; border-radius: 12px; padding: 14px; margin-top: 12px; }
+  .card b { font-size: 16px; }
+  .card p { margin: 4px 0; font-size: 14px; color: #444; }
+  .fotos { display: flex; gap: 8px; margin: 10px 0; }
+  .fotos img { width: 48%; border-radius: 10px; object-fit: cover; height: 160px; }
+  .btn-aprovar { background: #16a34a; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 8px; }
+  .btn-reprovar { background: #fee2e2; color: #dc2626; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 8px; }
+  .btn-verde { background: #16a34a; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 8px; }
+  .vazio { text-align: center; color: #777; margin-top: 30px; }
+  input{width:100%;padding:12px;margin:6px 0;border:1px solid #ddd;border-radius:10px}
+  .badge{padding:4px 8px;border-radius:20px;font-size:12px;font-weight:bold}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>✅ Admin - Chega Rápido</h1>
+  <p style="color:#666;font-size:13px">Controle de motoboys e pedidos</p>
+
+  <div style="background:#f8fafc;padding:12px;border-radius:12px;margin:12px 0">
+    <div style="font-weight:bold;margin-bottom:8px">🌧️ Está chovendo? <span style="font-weight:normal;color:#666;font-size:13px">(liga +R$ 2 por corrida para o motoboy)</span></div>
+    <button id="btnChuva" onclick="toggleChuva()" style="width:100%;padding:14px;border-radius:12px;background:#eee;color:black;font-size:16px;border:0;font-weight:bold;cursor:pointer">
+      ☀️ NÃO - Sem chuva
+    </button>
+  </div>
+
+  <button class="btn-verde" onclick="carregarTudo()">🔄 Atualizar Tudo</button>
+
+  <h2 style="font-size:18px;margin-top:20px">✅ Aprovar Motoboys</h2>
+  <p>Só aparece quem está com status <b>pendente</b>.</p>
+  <div id="lista"></div>
+
+  <h2 style="font-size:18px;margin-top:20px">📦 Pedidos Aguardando</h2>
+  <div id="listaPedidos">Carregando...</div>
+
+  <h2 style="font-size:18px;margin-top:20px">🏍️ Motoboys Online</h2>
+  <div id="listaMotoboys">Carregando...</div>
+
+  <h2 style="font-size:18px;margin-top:20px">➕ Cadastrar Motoboy</h2>
+  <input id="nomeMoto" placeholder="Nome do motoboy">
+  <input id="telMoto" placeholder="Telefone / WhatsApp">
+  <input id="placaMoto" placeholder="Placa da moto">
+  <button class="btn-verde" onclick="cadastrarMotoboy()">Cadastrar Motoboy</button>
+  <p id="msgMoto" style="text-align:center"></p>
+</div>
+<script>
+function getClient(){ return window.supabaseClient || window.supabase; }
+
+// CHUVA
+let chovendo = false;
+async function carregarChuva() {
+  try{
+    const { data } = await getClient().from('config').select('chovendo').eq('id', 1).maybeSingle();
+    if (data) chovendo = data.chovendo;
+  }catch(e){}
+  atualizarBotaoChuva();
+}
+function atualizarBotaoChuva() {
+  const btn = document.getElementById('btnChuva');
+  if (!btn) return;
+  if (chovendo) {
+    btn.innerText = '🌧️ SIM - Está chovendo (+R$ 2)';
+    btn.style.background = '#3b82f6';
+    btn.style.color = 'white';
+  } else {
+    btn.innerText = '☀️ NÃO - Sem chuva';
+    btn.style.background = '#eee';
+    btn.style.color = 'black';
+  }
+}
+async function toggleChuva() {
+  chovendo = !chovendo;
+  atualizarBotaoChuva();
+  const { error } = await getClient().from('config').update({ chovendo: chovendo }).eq('id', 1);
+  if (error) alert('Erro ao salvar: ' + error.message);
+  else alert(chovendo ? 'Chuva LIGADA! Motoboy ganha +R$ 2 por corrida' : 'Chuva DESLIGADA');
+}
+
+// APROVAR MOTOBOYS - ANTIGO
+async function carregar() {
+  const { data, error } = await getClient().from('motoboys').select('*').eq('aprovado', false).eq('bloqueado', false).order('created_at', { ascending: false });
+  const lista = document.getElementById('lista');
+  if (error) { lista.innerHTML = "Erro: " + error.message; return; }
+  const pendentes = (data||[]).filter(m => !m.status || m.status === 'pendente' || m.status === 'em_analise' || m.status === 'analise');
+  if (!pendentes.length) { lista.innerHTML = '<div class="vazio">Nenhum motoboy pendente 🎉</div>'; return; }
+  lista.innerHTML = pendentes.map(m => {
+    const nome = (m.nome_completo || m.nome || '').replace(/'/g,'');
+    const tel = (m.telefone || m.whatsapp || '').replace(/'/g,'');
+    const cpf = (m.cpf || '').replace(/'/g,'');
+    const fotoDoc = m.foto_documento_url || m.foto_cnh || '';
+    const fotoSelf = m.foto_selfie_url || m.foto_selfie || '';
+    return `
+    <div class="card">
+      <b>${m.nome_completo || m.nome}</b>
+      <p>CPF: ${m.cpf} | Nasc: ${m.data_nascimento || ''}</p>
+      <p>Placa: ${m.placa_moto || m.placa} | Whats: ${m.telefone || m.whatsapp}</p>
+      <p>E-mail: ${m.email || ''}</p>
+      <div class="fotos">
+        ${fotoDoc ? `<img src="${fotoDoc}" onclick="window.open('${fotoDoc}','_blank')">` : ''}
+        ${fotoSelf ? `<img src="${fotoSelf}" onclick="window.open('${fotoSelf}','_blank')">` : ''}
+      </div>
+      <button class="btn-aprovar" onclick="aprovar('${m.id}', '${nome}', '${cpf}', '${tel}')">✅ Aprovar e avisar no WhatsApp</button>
+      <button class="btn-reprovar" onclick="reprovar('${m.id}', '${nome}', '${tel}')">❌ Reprovar</button>
+    </div>`;
+  }).join('');
+}
+async function aprovar(id, nome, cpf, telefone) {
+  if (!confirm(`Aprovar ${nome}?`)) return;
+  const { error } = await getClient().from('motoboys').update({ aprovado: true, status: 'aprovado' }).eq('id', id);
+  if (error) { alert("Erro: " + error.message); return; }
+  const telLimpo = telefone.replace(/\D/g, '');
+  const telZap = telLimpo.startsWith('55') ? telLimpo : '55' + telLimpo;
+  const mensagem = `Parabéns ${nome}! ✅ Seu cadastro no Chega Rápido foi APROVADO!\n\nVocê já pode entrar no app e começar a receber entregas.\n\nSeu login:\nUsuário: ${cpf}\nSenha: a que você criou no cadastro\n\nQualquer dúvida chama a gente aqui. Bora rodar! 🛵`;
+  window.open(`https://wa.me/${telZap}?text=${encodeURIComponent(mensagem)}`, '_blank');
+  carregarTudo();
+}
+async function reprovar(id, nome, telefone) {
+  if (!confirm(`Reprovar ${nome}?`)) return;
+  const { error } = await getClient().from('motoboys').update({ bloqueado: true, status: 'rejeitado' }).eq('id', id);
+  if (error) { alert("Erro: " + error.message); return; }
+  const telLimpo = telefone.replace(/\D/g, '');
+  const telZap = telLimpo.startsWith('55') ? telLimpo : '55' + telLimpo;
+  const mensagem = `Olá ${nome}, seu cadastro no Chega Rápido não foi aprovado desta vez. Verifique seus documentos e tente novamente. Qualquer dúvida chama a gente.`;
+  window.open(`https://wa.me/${telZap}?text=${encodeURIComponent(mensagem)}`, '_blank');
+  carregarTudo();
+}
+
+// PEDIDOS + ONLINE + CADASTRAR - NOVO
+async function carregarTudo() {
+  carregarChuva();
+  carregar();
+  const { data: pedidos } = await getClient().from('entregas').select('*').in('status',['aguardando','pendente']).order('created_at', { ascending: false }).limit(20);
+  const divPed = document.getElementById('listaPedidos');
+  if (!pedidos || pedidos.length === 0) {
+    divPed.innerHTML = '<p style="color:#888">Nenhum pedido ainda.</p>';
+  } else {
+    divPed.innerHTML = pedidos.map(p => `
+      <div class="card">
+        <b>${p.nome_cliente || p.cliente_nome || ''}</b> - R$ ${p.valor_total || p.valor || ''}<br>
+        <span style="font-size:13px;color:#555">${p.endereco_retirada || ''} → ${p.endereco_entrega || p.endereco || ''}</span><br>
+        <span class="badge" style="background:#fef3c7">${p.status || ''}</span>
+        <span style="font-size:12px;color:#888"> ${p.cidade || ''}</span>
+      </div>
+    `).join('');
+  }
+  const { data: motos } = await getClient().from('motoboys').select('*').eq('online', true).order('created_at', { ascending: false }).limit(20);
+  const divMoto = document.getElementById('listaMotoboys');
+  if (!motos || motos.length === 0) {
+    divMoto.innerHTML = '<p style="color:#888">Nenhum motoboy online.</p>';
+  } else {
+    divMoto.innerHTML = motos.map(m => `
+      <div class="card"><b>${m.nome_completo || m.nome || ''}</b> 🟢 Online<br><span style="font-size:13px">${m.telefone || m.whatsapp || ''} - ${m.placa_moto || m.placa || ''}</span></div>
+    `).join('');
+  }
+}
+async function cadastrarMotoboy() {
+  const nome = document.getElementById('nomeMoto').value.trim();
+  const tel = document.getElementById('telMoto').value.trim();
+  const placa = document.getElementById('placaMoto').value.trim();
+  if (!nome) return alert('Digite o nome');
+  const { error } = await getClient().from('motoboys').insert([{ nome: nome, nome_completo: nome, telefone: tel, whatsapp: tel, placa: placa, placa_moto: placa, aprovado: true, status: 'aprovado' }]);
+  if (error) alert('Erro: ' + error.message);
+  else {
+    document.getElementById('msgMoto').innerText = 'Motoboy cadastrado!';
+    document.getElementById('nomeMoto').value = '';
+    document.getElementById('telMoto').value = '';
+    document.getElementById('placaMoto').value = '';
+    carregarTudo();
+  }
+}
+carregarTudo();
+</script>
+</body>
+</html>
