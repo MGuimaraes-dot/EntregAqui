@@ -8,18 +8,22 @@
 body{font-family:Arial;background:#f5f5f5;padding:15px;margin:0}
 .card{background:#fff;max-width:480px;margin:auto;padding:20px;border-radius:12px}
 input{width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box}
-label{font-weight:bold;font-size:14px;display:block;margin-top:12px}
+label{font-weight:bold;font-size:14px;display:block;margin-top:16px}
 button{width:100%;padding:13px;background:#ff6b00;color:#fff;border:0;border-radius:8px;font-weight:bold;cursor:pointer;margin-top:10px}
 button:disabled{opacity:0.6}
 .msg{margin-top:10px;padding:10px;border-radius:8px;display:none}
 img.preview{width:100%;border-radius:10px;display:none;margin:8px 0}
 hr{margin:22px 0}
+.foto-box{border:1px solid #ddd;border-radius:10px;padding:12px;margin-top:8px}
+.btns{display:flex;gap:8px}
+.btn-foto{flex:1;padding:11px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#333;font-weight:bold;cursor:pointer;font-size:14px}
+.btn-foto.cam{background:#111;color:#fff;border-color:#111}
+.ok{color:green;font-size:13px;font-weight:bold;display:none;margin-top:6px}
 </style>
 </head>
 <body>
 <div class="card">
 <h2>Quero ser motoboy</h2>
-<p>Preencha tudo e tire as 3 fotos. Sem foto não envia.</p>
 
 <form onsubmit="cadastrar(event)">
 <input id="nome" placeholder="Nome completo" required>
@@ -29,16 +33,40 @@ hr{margin:22px 0}
 <input id="senha" type="password" placeholder="Crie uma senha" required>
 
 <label>CNH - frente *</label>
-<input type="file" id="fotoCNH" accept="image/*" required onchange="verFoto(this,'prevCNH')">
-<img id="prevCNH" class="preview">
+<div class="foto-box">
+  <div class="btns">
+    <button type="button" class="btn-foto cam" onclick="document.getElementById('cnhCamera').click()">📷 Tirar foto</button>
+    <button type="button" class="btn-foto" onclick="document.getElementById('cnhGaleria').click()">🖼️ Carregar foto</button>
+  </div>
+  <div id="okCNH" class="ok">✅ Foto da CNH pronta</div>
+  <img id="prevCNH" class="preview">
+  <input type="file" id="cnhCamera" accept="image/*" capture="environment" style="display:none" onchange="setFoto('cnh', this, 'prevCNH', 'okCNH')">
+  <input type="file" id="cnhGaleria" accept="image/*" style="display:none" onchange="setFoto('cnh', this, 'prevCNH', 'okCNH')">
+</div>
 
 <label>CRLV - documento da moto *</label>
-<input type="file" id="fotoCRLV" accept="image/*" required onchange="verFoto(this,'prevCRLV')">
-<img id="prevCRLV" class="preview">
+<div class="foto-box">
+  <div class="btns">
+    <button type="button" class="btn-foto cam" onclick="document.getElementById('crlvCamera').click()">📷 Tirar foto</button>
+    <button type="button" class="btn-foto" onclick="document.getElementById('crlvGaleria').click()">🖼️ Carregar foto</button>
+  </div>
+  <div id="okCRLV" class="ok">✅ Foto do CRLV pronta</div>
+  <img id="prevCRLV" class="preview">
+  <input type="file" id="crlvCamera" accept="image/*" capture="environment" style="display:none" onchange="setFoto('crlv', this, 'prevCRLV', 'okCRLV')">
+  <input type="file" id="crlvGaleria" accept="image/*" style="display:none" onchange="setFoto('crlv', this, 'prevCRLV', 'okCRLV')">
+</div>
 
 <label>Selfie com documento *</label>
-<input type="file" id="fotoSelfie" accept="image/*" required onchange="verFoto(this,'prevSelfie')">
-<img id="prevSelfie" class="preview">
+<div class="foto-box">
+  <div class="btns">
+    <button type="button" class="btn-foto cam" onclick="document.getElementById('selfieCamera').click()">📷 Tirar foto</button>
+    <button type="button" class="btn-foto" onclick="document.getElementById('selfieGaleria').click()">🖼️ Carregar foto</button>
+  </div>
+  <div id="okSelfie" class="ok">✅ Selfie pronta</div>
+  <img id="prevSelfie" class="preview">
+  <input type="file" id="selfieCamera" accept="image/*" capture="user" style="display:none" onchange="setFoto('selfie', this, 'prevSelfie', 'okSelfie')">
+  <input type="file" id="selfieGaleria" accept="image/*" style="display:none" onchange="setFoto('selfie', this, 'prevSelfie', 'okSelfie')">
+</div>
 
 <button id="btnCadastrar" type="submit">Enviar cadastro</button>
 </form>
@@ -54,19 +82,24 @@ hr{margin:22px 0}
 
 <script src="supabase.js"></script>
 <script>
+let arquivos = { cnh: null, crlv: null, selfie: null };
+
 function mostrar(id, texto, cor){
   const el = document.getElementById(id);
   el.style.display = 'block';
   el.style.background = cor;
   el.textContent = texto;
 }
-function verFoto(input, idImg){
+
+function setFoto(tipo, input, idImg, idOk){
   const file = input.files[0];
   if(!file) return;
+  arquivos[tipo] = file;
   const img = document.getElementById(idImg);
   const reader = new FileReader();
   reader.onload = e => { img.src = e.target.result; img.style.display='block'; };
   reader.readAsDataURL(file);
+  document.getElementById(idOk).style.display = 'block';
 }
 
 async function enviarFoto(file, cpf, tipo){
@@ -82,24 +115,19 @@ async function cadastrar(e){
   const btn = document.getElementById('btnCadastrar');
   btn.disabled = true;
   btn.textContent = 'Enviando...';
-
   try{
     const cpf = document.getElementById('cpf').value.replace(/\D/g,'');
-    const fCNH = document.getElementById('fotoCNH').files[0];
-    const fCRLV = document.getElementById('fotoCRLV').files[0];
-    const fSelfie = document.getElementById('fotoSelfie').files[0];
-
-    if(!fCNH) throw new Error('Falta a foto da CNH');
-    if(!fCRLV) throw new Error('Falta a foto do CRLV');
-    if(!fSelfie) throw new Error('Falta a Selfie');
+    if(!arquivos.cnh) throw new Error('Falta a foto da CNH');
+    if(!arquivos.crlv) throw new Error('Falta a foto do CRLV');
+    if(!arquivos.selfie) throw new Error('Falta a Selfie');
     if(typeof supabase === 'undefined') throw new Error('supabase.js não carregou');
 
     btn.textContent = 'Enviando foto CNH...';
-    const urlCNH = await enviarFoto(fCNH, cpf, 'cnh');
+    const urlCNH = await enviarFoto(arquivos.cnh, cpf, 'cnh');
     btn.textContent = 'Enviando foto CRLV...';
-    const urlCRLV = await enviarFoto(fCRLV, cpf, 'crlv');
+    const urlCRLV = await enviarFoto(arquivos.crlv, cpf, 'crlv');
     btn.textContent = 'Enviando Selfie...';
-    const urlSelfie = await enviarFoto(fSelfie, cpf, 'selfie');
+    const urlSelfie = await enviarFoto(arquivos.selfie, cpf, 'selfie');
 
     btn.textContent = 'Salvando cadastro...';
     const dados = {
@@ -114,10 +142,8 @@ async function cadastrar(e){
       foto_crlv: urlCRLV,
       foto_selfie: urlSelfie
     };
-
     const { error } = await supabase.from('motoboys').insert([dados]);
     if(error) throw error;
-
     mostrar('msg', 'Cadastro enviado! Fotos salvas no Supabase. Aguarde aprovação.', '#e0ffe0');
   }catch(err){
     mostrar('msg', 'ERRO: ' + (err.message || err), '#ffe0e0');
