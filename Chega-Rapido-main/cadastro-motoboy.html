@@ -3,266 +3,96 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cadastro Motoboy - Chega Rápido</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
+<title>Cadastro Motoboy - EntregAqui</title>
 <style>
-  *{box-sizing:border-box;font-family:Arial,sans-serif}
-  body{background:#0f1115;color:#fff;margin:0;padding:20px}
-  .box{max-width:480px;margin:0 auto;background:#1a1d24;padding:20px;border-radius:16px}
-  h1{text-align:center;font-size:22px}
-  label{display:block;margin:15px 0 5px;font-size:14px;color:#ccc}
-  input[type="text"],input[type="email"],input[type="date"],input[type="password"],input[type="tel"]{width:100%;padding:14px;border-radius:10px;border:1px solid #333;background:#2a2e38;color:#fff;font-size:16px}
-  .foto-box{background:#2a2e38;border-radius:10px;padding:12px;margin-bottom:10px}
-  .foto-box p{margin:0 0 10px;font-size:13px;color:#aaa}
-  .btns{display:flex;gap:10px}
-  .btn-foto{flex:1;padding:12px;border:0;border-radius:10px;font-weight:bold;cursor:pointer;font-size:14px;text-align:center;display:block}
-  .btn-cam{background:#22c55e;color:#000}
-  .btn-gal{background:#3b4252;color:#fff}
-  .nome-arquivo{font-size:12px;color:#22c55e;margin-top:8px;display:block;word-break:break-all}
-  #btnEnviar{width:100%;padding:16px;background:#22c55e;color:#000;border:0;border-radius:12px;font-weight:bold;font-size:16px;margin-top:20px;cursor:pointer}
-  #btnConsultarToggle{width:100%;padding:16px;background:#3b4252;color:#fff;border:0;border-radius:12px;font-weight:bold;font-size:16px;margin-top:10px;cursor:pointer}
-  #btnConsultarAgora{width:100%;padding:14px;background:#22c55e;color:#000;border:0;border-radius:12px;font-weight:bold;font-size:16px;margin-top:12px;cursor:pointer}
-  #msg{text-align:center;margin-top:15px;font-weight:bold}
-  input[type="file"]{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
-  #boxConsulta{display:none;background:#2a2e38;border-radius:12px;padding:16px;margin-top:14px}
-  #resultadoConsulta{margin-top:14px;padding:14px;border-radius:12px;text-align:center;font-weight:bold;font-size:15px;line-height:1.5}
-  .res-analise{background:#fef3c7;color:#92400e}
-  .res-aprovado{background:#dcfce7;color:#166534}
-  .res-bloqueado{background:#fee2e2;color:#991b1b}
-  .res-erro{background:#fee2e2;color:#991b1b}
-  .linha{border-top:1px dashed #444;margin:14px 0}
-  .link-voltar{display:block;text-align:center;color:#ccc;margin-top:12px;font-size:14px}
+body{font-family:Arial;background:#f5f5f5;padding:15px}
+.card{background:#fff;max-width:480px;margin:auto;padding:20px;border-radius:12px}
+input,select{width:100%;padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px;box-sizing:border-box}
+button{width:100%;padding:13px;background:#ff6b00;color:#fff;border:0;border-radius:8px;font-weight:bold;cursor:pointer}
+button:disabled{opacity:0.6}
+.msg{margin-top:10px;padding:10px;border-radius:8px;display:none}
+hr{margin:20px 0}
 </style>
 </head>
 <body>
-<div class="box">
-  <h1>🏍️ Cadastro Motoboy</h1>
-  <form id="formMotoboy">
-    <label>Nome completo *</label>
-    <input type="text" id="nome" name="nome" placeholder="Ex: MAYKON ANTONIO GUIMARAES" required>
-    <label>CPF *</label>
-    <input type="text" id="cpf" name="cpf" placeholder="000.000.000-00" required>
-    <label>Data de nascimento *</label>
-    <input type="date" id="data_nascimento" name="data_nascimento" required>
-    <label>Placa da moto *</label>
-    <input type="text" id="placa" name="placa" placeholder="Ex: DGX-2F88" required>
-    <label>E-mail *</label>
-    <input type="email" id="email" name="email" placeholder="seu@email.com" required>
-    <label>Telefone / WhatsApp *</label>
-    <input type="tel" id="telefone" name="telefone" placeholder="Ex: (11) 99999-9999" required>
-    <label>Criar Senha *</label>
-    <input type="password" id="senha" name="senha" placeholder="Crie uma senha para entrar no app" required>
-    <label>Foto da CNH *</label>
-    <div class="foto-box">
-      <p>Foto da frente da sua CNH</p>
-      <div class="btns">
-        <label for="foto_cnh_cam" class="btn-foto btn-cam">📷 Tirar foto agora</label>
-        <label for="foto_cnh_gal" class="btn-foto btn-gal">🖼️ Galeria</label>
-      </div>
-      <span class="nome-arquivo" id="nome_foto_cnh"></span>
-      <input type="file" id="foto_cnh_cam" accept="image/*" capture="environment">
-      <input type="file" id="foto_cnh_gal" accept="image/*">
-    </div>
-    <label>Foto do documento da moto (CRLV) *</label>
-    <div class="foto-box">
-      <p>Foto do CRLV da moto</p>
-      <div class="btns">
-        <label for="foto_crlv_cam" class="btn-foto btn-cam">📷 Tirar foto agora</label>
-        <label for="foto_crlv_gal" class="btn-foto btn-gal">🖼️ Galeria</label>
-      </div>
-      <span class="nome-arquivo" id="nome_foto_crlv"></span>
-      <input type="file" id="foto_crlv_cam" accept="image/*" capture="environment">
-      <input type="file" id="foto_crlv_gal" accept="image/*">
-    </div>
-    <label>Sua selfie segurando o documento *</label>
-    <div class="foto-box">
-      <p>Segure o documento do lado do rosto</p>
-      <div class="btns">
-        <label for="foto_selfie_cam" class="btn-foto btn-cam">🤳 Tirar selfie agora</label>
-        <label for="foto_selfie_gal" class="btn-foto btn-gal">🖼️ Galeria</label>
-      </div>
-      <span class="nome-arquivo" id="nome_foto_selfie"></span>
-      <input type="file" id="foto_selfie_cam" accept="image/*" capture="user">
-      <input type="file" id="foto_selfie_gal" accept="image/*">
-    </div>
-    <button type="submit" id="btnEnviar">ENVIAR CADASTRO</button>
-    <div id="msg"></div>
-  </form>
-  <div class="linha"></div>
-  <button type="button" id="btnConsultarToggle" onclick="abrirConsulta()">🔍 CONSULTAR CADASTRO</button>
-  <div id="boxConsulta">
-    <p style="text-align:center;margin:0;font-size:14px;color:#ccc">Digite seu CPF e sua senha para ver seu status</p>
-    <label>CPF cadastrado</label>
-    <input type="text" id="cpf_consulta" placeholder="000.000.000-00">
-    <label>Senha cadastrada</label>
-    <input type="password" id="senha_consulta" placeholder="Sua senha">
-    <button type="button" id="btnConsultarAgora" onclick="consultarCadastro()">Ver meu status</button>
-    <div id="resultadoConsulta"></div>
-    <div style="margin-top:12px;border-top:1px dashed #444;padding-top:12px">
-      <p style="font-size:13px;color:#ccc;margin:0 0 8px">Informação errada? Corrija ANTES da aprovação.</p>
-      <label style="margin-top:8px">Corrigir nome</label>
-      <input type="text" id="edit_nome_consulta" placeholder="Nome correto (se precisar corrigir)">
-      <label>Corrigir telefone / WhatsApp</label>
-      <input type="text" id="edit_tel_consulta" placeholder="Telefone correto (se precisar corrigir)">
-      <label>Corrigir placa</label>
-      <input type="text" id="edit_placa_consulta" placeholder="Placa correta (se precisar corrigir)">
-      <button type="button" onclick="corrigirAntes()" style="width:100%;padding:12px;background:#3b4252;color:#fff;border:0;border-radius:10px;font-weight:bold;margin-top:10px;cursor:pointer">💾 Salvar correção</button>
-    </div>
-  </div>
-  <a class="link-voltar" href="index.html">← Voltar para o login</a>
+<div class="card">
+<h2>Quero ser motoboy</h2>
+<p>Cadastre-se e aguarde aprovação.</p>
+
+<form onsubmit="cadastrar(event)">
+<input id="nome" placeholder="Nome completo" required>
+<input id="cpf" placeholder="CPF só números" required>
+<input id="telefone" placeholder="WhatsApp com DDD" required>
+<input id="placa" placeholder="Placa da moto" required>
+<input id="senha" type="password" placeholder="Crie uma senha" required>
+<button id="btnCadastrar" type="submit">Enviar cadastro</button>
+</form>
+<div id="msg" class="msg"></div>
+
+<hr>
+<h3>Consultar meu cadastro</h3>
+<input id="cpfConsulta" placeholder="Digite seu CPF">
+<button type="button" onclick="consultar()">Consultar status</button>
+<div id="msgConsulta" class="msg"></div>
+
+<br><a href="index.html">Voltar</a>
 </div>
+
+<script src="supabase.js"></script>
 <script>
-  function getClient(){ return window.supabaseClient || window.supabase; }
-  function soNumeros(v){ return (v||'').replace(/\D/g,''); }
-  function cpfMask(cpf){ return cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4'); }
+function mostrar(id, texto, cor){
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  el.style.background = cor;
+  el.textContent = texto;
+}
 
-  let arquivos = { cnh:null, crlv:null, selfie:null };
-  function ligar(idCam, idGal, chave, spanId){
-    const mostrar = (input) => {
-      if(input.files[0]){
-        arquivos[chave] = input.files[0];
-        document.getElementById(spanId).textContent = "✅ " + input.files[0].name;
-      }
-    };
-    document.getElementById(idCam).addEventListener('change', function(){ mostrar(this); });
-    document.getElementById(idGal).addEventListener('change', function(){ mostrar(this); });
-  }
-  ligar('foto_cnh_cam','foto_cnh_gal','cnh','nome_foto_cnh');
-  ligar('foto_crlv_cam','foto_crlv_gal','crlv','nome_foto_crlv');
-  ligar('foto_selfie_cam','foto_selfie_gal','selfie','nome_foto_selfie');
+async function cadastrar(e){
+  e.preventDefault();
+  const btn = document.getElementById('btnCadastrar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
 
-  function mascaraCPF(input){
-    let v = input.value.replace(/\D/g,'').slice(0,11);
-    v = v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
-    input.value = v;
-  }
-  document.getElementById('cpf').addEventListener('input', function(){ mascaraCPF(this); });
-  document.getElementById('cpf_consulta').addEventListener('input', function(){ mascaraCPF(this); });
+  const dados = {
+    nome: document.getElementById('nome').value.trim(),
+    cpf: document.getElementById('cpf').value.replace(/\D/g,''),
+    telefone: document.getElementById('telefone').value.trim(),
+    placa: document.getElementById('placa').value.trim().toUpperCase(),
+    senha: document.getElementById('senha').value,
+    status: 'pendente',
+    cidade: 'São José dos Campos'
+  };
 
-  document.getElementById('formMotoboy').addEventListener('submit', async function(e){
-    e.preventDefault();
-    const btn = document.getElementById('btnEnviar');
-    const msg = document.getElementById('msg');
-    const nome = document.getElementById('nome').value.trim();
-    const cpf = soNumeros(document.getElementById('cpf').value.trim());
-    const data_nascimento = document.getElementById('data_nascimento').value;
-    const placaRaw = document.getElementById('placa').value.trim().toUpperCase();
-    const placa = placaRaw.replace(/[^A-Z0-9]/g,'');
-    const email = document.getElementById('email').value.trim();
-    const telefone = document.getElementById('telefone').value.trim();
-    const senha = document.getElementById('senha').value;
-    if(!nome){ alert('Preencha o Nome completo'); return; }
-    if(!cpf || cpf.length!==11 || !data_nascimento || !placa || !email || !telefone || !senha){ alert('Preencha todos os campos - CPF precisa ter 11 números'); return; }
-    if(!arquivos.cnh){ alert('Tire a foto da CNH'); return; }
-    if(!arquivos.crlv){ alert('Tire a foto do CRLV'); return; }
-    if(!arquivos.selfie){ alert('Tire a selfie'); return; }
-    btn.textContent = "Enviando... aguarde, subindo as fotos...";
-    btn.disabled = true;
-    msg.textContent = "";
-    try{
-      const supabaseClient = getClient();
-      async function uploadFoto(file, pasta){
-        const nomeArquivo = Date.now() + '_' + pasta + '_' + file.name.replace(/\s/g,'_');
-        const { error } = await supabaseClient.storage.from('motoboys').upload(nomeArquivo, file);
-        if(error) throw error;
-        const { data } = supabaseClient.storage.from('motoboys').getPublicUrl(nomeArquivo);
-        return data.publicUrl;
-      }
-      const url_cnh = await uploadFoto(arquivos.cnh,'cnh');
-      const url_crlv = await uploadFoto(arquivos.crlv,'crlv');
-      const url_selfie = await uploadFoto(arquivos.selfie,'selfie');
-      const { error } = await supabaseClient.from('motoboys').insert([{
-        nome: nome, nome_completo: nome, cpf: cpf, data_nascimento: data_nascimento, placa: placa, placa_moto: placa, email: email,
-        telefone: telefone, whatsapp: telefone, senha: senha,
-        foto_cnh: url_cnh, foto_crlv: url_crlv, foto_selfie: url_selfie,
-        foto_documento_url: url_cnh, foto_selfie_url: url_selfie,
-        status: 'pendente', aprovado: false, bloqueado: false, online: false,
-        created_at: new Date().toISOString()
-      }]);
-      if(error) throw error;
-      msg.style.color = "#22c55e";
-      msg.textContent = "✅ Cadastro enviado com sucesso! Agora clique em CONSULTAR CADASTRO abaixo para acompanhar.";
-      alert("Cadastro enviado com sucesso! Clique em CONSULTAR CADASTRO para ver seu status.");
-      this.reset();
-      arquivos = {cnh:null,crlv:null,selfie:null};
-      ['nome_foto_cnh','nome_foto_crlv','nome_foto_selfie'].forEach(i=>document.getElementById(i).textContent="");
-    }catch(err){
-      alert("ERRO: " + err.message);
-      msg.style.color = "red";
-      msg.textContent = "ERRO: " + err.message;
-    }finally{
-      btn.textContent = "ENVIAR CADASTRO";
-      btn.disabled = false;
-    }
-  });
+  const { error } = await supabase.from('motoboys').insert([dados]);
 
-  function abrirConsulta(){
-    const box = document.getElementById('boxConsulta');
-    box.style.display = box.style.display === 'block' ? 'none' : 'block';
-    if(box.style.display === 'block'){
-      box.scrollIntoView({behavior:'smooth'});
-      const cpfCad = document.getElementById('cpf').value;
-      if(cpfCad && !document.getElementById('cpf_consulta').value){
-        document.getElementById('cpf_consulta').value = cpfCad;
-      }
-    }
+  if(error){
+    mostrar('msg', 'Erro: ' + error.message, '#ffe0e0');
+    btn.disabled = false;
+    btn.textContent = 'Enviar cadastro';
+    return;
   }
-  async function buscarPorCpfSenha(cpf, senha){
-    const supabaseClient = getClient();
-    let { data } = await supabaseClient.from('motoboys').select('*').eq('cpf',cpf).eq('senha',senha).maybeSingle();
-    if(!data){
-      const r2 = await supabaseClient.from('motoboys').select('*').eq('cpf',cpfMask(cpf)).eq('senha',senha).maybeSingle();
-      data = r2.data;
-    }
-    return data;
+
+  mostrar('msg', 'Cadastro enviado! Aguarde aprovação do admin. Consulte seu status abaixo com seu CPF.', '#e0ffe0');
+  // NÃO limpa o form, pra não parecer que apagou
+  btn.disabled = false;
+  btn.textContent = 'Enviar cadastro';
+}
+
+async function consultar(){
+  const cpf = document.getElementById('cpfConsulta').value.replace(/\D/g,'');
+  if(!cpf){ mostrar('msgConsulta','Digite o CPF',' #ffe0e0'); return; }
+  
+  const { data, error } = await supabase.from('motoboys').select('*').eq('cpf', cpf).single();
+
+  if(error || !data){
+    mostrar('msgConsulta','Cadastro não encontrado. Verifique o CPF.','#ffe0e0');
+    return;
   }
-  async function consultarCadastro(){
-    const cpf = soNumeros(document.getElementById('cpf_consulta').value.trim());
-    const senha = document.getElementById('senha_consulta').value;
-    const res = document.getElementById('resultadoConsulta');
-    if(!cpf || !senha){ res.className=''; res.style.background='#fee2e2'; res.style.color='#991b1b'; res.style.padding='14px'; res.style.borderRadius='12px'; res.textContent='⚠️ Digite seu CPF e sua senha'; return; }
-    res.textContent='🔍 Consultando...';
-    res.className='';
-    const data = await buscarPorCpfSenha(cpf, senha);
-    if(!data){ res.className='res-erro'; res.style.padding='14px'; res.textContent='❌ CPF ou senha não encontrados. Confira se você já se cadastrou e digitou certo.'; return; }
-    const nomeExibir = data.nome_completo || data.nome || '';
-    const placaExibir = data.placa_moto || data.placa || '';
-    const telExibir = data.telefone || data.whatsapp || '';
-    if(data.status==='bloqueado' || data.bloqueado){
-      res.className='res-bloqueado'; res.style.padding='14px';
-      res.innerHTML='🔴 BLOQUEADO<br><br>'+nomeExibir+'<br>Placa: '+placaExibir+'<br>Whats: '+telExibir+'<br><br>Fale com a administração do Chega Rápido';
-    } else if(data.status==='rejeitado'){
-      res.className='res-bloqueado'; res.style.padding='14px';
-      res.innerHTML='❌ NÃO APROVADO<br><br>'+nomeExibir+'<br>Placa: '+placaExibir+'<br>Whats: '+telExibir+'<br><br>Fale com a administração do Chega Rápido';
-    } else if(data.status==='aprovado' || data.aprovado===true){
-      res.className='res-aprovado'; res.style.padding='14px';
-      res.innerHTML='🟢 APROVADO!<br><br>'+nomeExibir+'<br>Placa: '+placaExibir+'<br>Whats: '+telExibir+'<br><br>Você já pode entrar no painel e aceitar entregas!';
-    } else {
-      res.className='res-analise'; res.style.padding='14px';
-      res.innerHTML='🟡 EM ANÁLISE<br><br>'+nomeExibir+'<br>Placa: '+placaExibir+'<br>Whats: '+telExibir+'<br><br>Seu cadastro está sendo analisado. Volte aqui depois para consultar de novo.';
-    }
-  }
-  async function corrigirAntes(){
-    const cpf = soNumeros(document.getElementById('cpf_consulta').value.trim());
-    const senha = document.getElementById('senha_consulta').value;
-    if(!cpf||!senha) return alert('Digite CPF e senha primeiro para confirmar que é você');
-    const data = await buscarPorCpfSenha(cpf, senha);
-    if(!data) return alert('CPF ou senha não encontrados');
-    if(data.status==='aprovado' || data.aprovado===true) return alert('Cadastro já aprovado. Agora só a senha pode ser alterada dentro do painel.');
-    const nome = document.getElementById('edit_nome_consulta').value.trim();
-    const tel = document.getElementById('edit_tel_consulta').value.trim();
-    const placa = document.getElementById('edit_placa_consulta').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
-    const upd = {};
-    if(nome) { upd.nome=nome; upd.nome_completo=nome; }
-    if(tel) { upd.telefone=tel; upd.whatsapp=tel; }
-    if(placa) { upd.placa=placa; upd.placa_moto=placa; }
-    if(Object.keys(upd).length===0) return alert('Preencha pelo menos um campo para corrigir');
-    const {error} = await getClient().from('motoboys').update(upd).eq('id',data.id);
-    if(error) return alert(error.message);
-    alert('✅ Corrigido! Aguarde a aprovação.');
-    consultarCadastro();
-  }
+
+  if(data.status === 'pendente') mostrar('msgConsulta','Status: PENDENTE - Aguardando aprovação.','#fff3cd');
+  if(data.status === 'aprovado') mostrar('msgConsulta','Status: APROVADO - Você já pode logar!','#e0ffe0');
+  if(data.status === 'reprovado') mostrar('msgConsulta','Status: REPROVADO - Fale com o suporte.','#ffe0e0');
+}
 </script>
 </body>
 </html>
