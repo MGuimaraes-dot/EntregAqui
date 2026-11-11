@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cadastro Motoboy - EntregAqui</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 body{font-family:Arial;background:#f5f5f5;padding:15px;margin:0}
 .card{background:#fff;max-width:480px;margin:auto;padding:20px;border-radius:12px}
@@ -80,8 +81,11 @@ hr{margin:22px 0}
 <br><a href="index.html">Voltar</a>
 </div>
 
-<script src="supabase.js"></script>
 <script>
+const SUPABASE_URL = "https://omxfbskvrcbbrydgsmsg.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Akx4rEvoEv4SHOx4ijG-vA_WmY-vU5-";
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let arquivos = { cnh: null, crlv: null, selfie: null };
 
 function mostrar(id, texto, cor){
@@ -90,7 +94,6 @@ function mostrar(id, texto, cor){
   el.style.background = cor;
   el.textContent = texto;
 }
-
 function setFoto(tipo, input, idImg, idOk){
   const file = input.files[0];
   if(!file) return;
@@ -101,7 +104,6 @@ function setFoto(tipo, input, idImg, idOk){
   reader.readAsDataURL(file);
   document.getElementById(idOk).style.display = 'block';
 }
-
 async function enviarFoto(file, cpf, tipo){
   const nomeArquivo = cpf + '_' + tipo + '_' + Date.now() + '.jpg';
   const { error } = await supabase.storage.from('fotos-motoboys').upload(nomeArquivo, file);
@@ -109,7 +111,6 @@ async function enviarFoto(file, cpf, tipo){
   const { data } = supabase.storage.from('fotos-motoboys').getPublicUrl(nomeArquivo);
   return data.publicUrl;
 }
-
 async function cadastrar(e){
   e.preventDefault();
   const btn = document.getElementById('btnCadastrar');
@@ -120,7 +121,6 @@ async function cadastrar(e){
     if(!arquivos.cnh) throw new Error('Falta a foto da CNH');
     if(!arquivos.crlv) throw new Error('Falta a foto do CRLV');
     if(!arquivos.selfie) throw new Error('Falta a Selfie');
-    if(typeof supabase === 'undefined') throw new Error('supabase.js não carregou');
 
     btn.textContent = 'Enviando foto CNH...';
     const urlCNH = await enviarFoto(arquivos.cnh, cpf, 'cnh');
@@ -152,7 +152,6 @@ async function cadastrar(e){
   btn.disabled = false;
   btn.textContent = 'Enviar cadastro';
 }
-
 async function consultar(){
   const cpf = document.getElementById('cpfConsulta').value.replace(/\D/g,'');
   if(!cpf){ mostrar('msgConsulta','Digite o CPF','#ffe0e0'); return; }
